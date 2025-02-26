@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIL Activity Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="book-container">
+        <div class="helper-column">
+            <div class="helper-content">
+                <!-- Helper cards will be dynamically added here -->
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="chatbot-card collapsible-section expanded">
+                <div class="chatbot-header">
+                    <h3>CLIL Teaching Assistant</h3>
+                    <button class="collapse-toggle" title="Toggle section">▼</button>
+                    <button id="chat-settings-btn" class="chat-settings-btn" title="Chat Settings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chatbot-messages" id="chatbot-messages">
+                    <!-- Messages will be added here dynamically -->
+                </div>
+                <div class="chatbot-input">
+                    <div class="chat-input-container">
+                        <textarea id="chat-input" placeholder="Ask me anything about CLIL teaching..."></textarea>
+                        <button id="chat-mic-button" class="mic-button" title="Click to speak">
+                            <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <button id="send-chat" class="chat-send-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chat-context-inputs collapsed">
+                    <div class="context-header">
+                        <h4>Chat Settings</h4>
+                        <div class="context-header-buttons">
+                            <button class="save-settings-btn" title="Save settings">💾</button>
+                            <button class="close-settings-btn">×</button>
+                        </div>
+                    </div>
+                    <div class="context-input-row">
+                        <div class="context-input-group">
+                            <span class="context-label">Number of students:</span>
+                            <input type="text" id="students-count" placeholder="e.g., 25" class="context-input">
+                        </div>
+                        <div class="context-input-group">
+                            <span class="context-label">Grade/Age level:</span>
+                            <input type="text" id="grade-level" placeholder="e.g., 5th grade" class="context-input">
+                        </div>
+                        <div class="context-input-group">
+                            <span class="context-label">Language skills:</span>
+                            <input type="text" id="language-skills" placeholder="e.g., B1 level" class="context-input">
+                        </div>
+                    </div>
+                    <div class="context-input-row sliders-row">
+                        <div class="context-input-group">
+                            <span class="context-label">Technical Vocabulary Density:</span>
+                            <div class="slider-container">
+                                <input type="range" id="vocab-density" class="context-slider" min="0" max="100" value="50">
+                                <span class="slider-value">50%</span>
+                            </div>
+                        </div>
+                        <div class="context-input-group">
+                            <span class="context-label">Grammar Complexity:</span>
+                            <div class="slider-container">
+                                <input type="range" id="grammar-complexity" class="context-slider" min="1" max="5" value="3">
+                                <span class="slider-value">3/5</span>
+                            </div>
+                        </div>
+                        <div class="context-input-group">
+                            <span class="context-label">Content vs Language Focus:</span>
+                            <div class="slider-container">
+                                <input type="range" id="content-language-balance" class="context-slider" min="0" max="100" value="50">
+                                <span class="slider-value">50% Content</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="context-input-row activity-types-row">
+                        <div class="context-input-group full-width">
+                            <div class="activity-types-header">
+                                <span class="context-label">Activity Types:</span>
+                                <div class="search-box">
+                                    <input type="text" id="activity-types-search" placeholder="Search..." class="context-input">
+                                </div>
+                            </div>
+                            <div class="activity-types-container">
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="all" class="activity-type-checkbox">
+                                    <span>All</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="station_rotation" class="activity-type-checkbox">
+                                    <span>Station Rotation</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="think_pair_share" class="activity-type-checkbox">
+                                    <span>Think-Pair-Share</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="project_based" class="activity-type-checkbox">
+                                    <span>Project Based</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="interactive_presentation" class="activity-type-checkbox">
+                                    <span>Interactive Presentation</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="debate_format" class="activity-type-checkbox">
+                                    <span>Debate Format</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="jigsaw_learning" class="activity-type-checkbox">
+                                    <span>Jigsaw Learning</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="lab_investigation" class="activity-type-checkbox">
+                                    <span>Lab Investigation</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="research_present" class="activity-type-checkbox">
+                                    <span>Research & Present</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="game_based" class="activity-type-checkbox">
+                                    <span>Game Based Learning</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="digital_story" class="activity-type-checkbox">
+                                    <span>Digital Story Creation</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="peer_teaching" class="activity-type-checkbox">
+                                    <span>Peer Teaching</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="role_play" class="activity-type-checkbox">
+                                    <span>Role Play</span>
+                                </label>
+                                <label class="activity-type-option">
+                                    <input type="checkbox" value="case_study" class="activity-type-checkbox">
+                                    <span>Case Study</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-section collapsible-section expanded">
+                <div class="input-header">
+                    <h3>Generate Activity</h3>
+                    <button class="collapse-toggle" title="Toggle section">▼</button>
+                </div>
+                <div class="input-container">
+                    <textarea id="prompt-input" placeholder="Describe the CLIL activity you want to create (e.g., 'Create a science activity about photosynthesis for 5th grade students')"></textarea>
+                    <button id="mic-button" class="mic-button" title="Click to speak">
+                        <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="generate-controls">
+                    <div class="prompt-modifiers">
+                        <label class="modifier-checkbox">
+                            <input type="checkbox" id="mod-superhero" value="superhero">
+                            <span>🦸‍♂️ Superhero Theme</span>
+                        </label>
+                        <label class="modifier-checkbox">
+                            <input type="checkbox" id="mod-space" value="space">
+                            <span>🚀 Space Adventure</span>
+                        </label>
+                        <label class="modifier-checkbox">
+                            <input type="checkbox" id="mod-mystery" value="mystery">
+                            <span>🔍 Detective Mystery</span>
+                        </label>
+                        <label class="modifier-checkbox">
+                            <input type="checkbox" id="mod-music" value="music">
+                            <span>🎵 Musical Journey</span>
+                        </label>
+                        <label class="modifier-checkbox">
+                            <input type="checkbox" id="mod-food" value="food">
+                            <span>🍳 Cooking Adventure</span>
+                        </label>
+                    </div>
+                    <button id="generate-btn" class="action-btn">Generate Activity</button>
+                </div>
+            </div>
+
+            <div class="character-section">
+                <div class="section content-objectives collapsible-section collapsed">
+                    <div class="section-header">
+                        <h3>1. Content Objectives</h3>
+                        <div class="section-controls">
+                            <div class="adjusting-indicator" id="adjusting-1">
+                                <span class="adjusting-icon">✏️</span>
+                                <span class="adjusting-text">adjusting content...</span>
+                            </div>
+                            <button class="card-btn view" title="View full screen">👁️</button>
+                            <button class="customize-btn" data-section="1">Customize</button>
+                            <div class="loading-indicator" id="loading-1">Applying changes...</div>
+                        </div>
+                    </div>
+                    <div class="part-container" id="content-container"></div>
+                    <div class="nav-buttons">
+                        <div class="section-quick-customizations" data-section="1">
+                            <!-- Quick customization buttons will be added dynamically -->
+                        </div>
+                        <button class="nav-btn prev-btn" onclick="changePart('content', -1)" title="Previous version"></button>
+                        <span class="version-counter"></span>
+                        <button class="nav-btn next-btn" onclick="changePart('content', 1)" title="Next version"></button>
+                    </div>
+                </div>
+
+                <div class="section language-objectives collapsible-section collapsed">
+                    <div class="section-header">
+                        <h3>2. Language Objectives</h3>
+                        <div class="section-controls">
+                            <div class="adjusting-indicator" id="adjusting-2">
+                                <span class="adjusting-icon">✏️</span>
+                                <span class="adjusting-text">adjusting content...</span>
+                            </div>
+                            <button class="card-btn view" title="View full screen">👁️</button>
+                            <button class="customize-btn" data-section="2">Customize</button>
+                            <div class="loading-indicator" id="loading-2">Applying changes...</div>
+                        </div>
+                    </div>
+                    <div class="part-container" id="language-container"></div>
+                    <div class="nav-buttons">
+                        <div class="section-quick-customizations" data-section="2">
+                            <!-- Quick customization buttons will be added dynamically -->
+                        </div>
+                        <button class="nav-btn prev-btn" onclick="changePart('language', -1)" title="Previous version"></button>
+                        <span class="version-counter"></span>
+                        <button class="nav-btn next-btn" onclick="changePart('language', 1)" title="Next version"></button>
+                    </div>
+                </div>
+
+                <div class="section learning-tasks collapsible-section collapsed">
+                    <div class="section-header">
+                        <h3>3. Learning Tasks</h3>
+                        <div class="section-controls">
+                            <div class="adjusting-indicator" id="adjusting-3">
+                                <span class="adjusting-icon">✏️</span>
+                                <span class="adjusting-text">adjusting content...</span>
+                            </div>
+                            <button class="card-btn view" title="View full screen">👁️</button>
+                            <button class="customize-btn" data-section="3">Customize</button>
+                            <div class="loading-indicator" id="loading-3">Applying changes...</div>
+                        </div>
+                    </div>
+                    <div class="part-container" id="tasks-container"></div>
+                    <div class="nav-buttons">
+                        <div class="section-quick-customizations" data-section="3">
+                            <!-- Quick customization buttons will be added dynamically -->
+                        </div>
+                        <button class="nav-btn prev-btn" onclick="changePart('tasks', -1)" title="Previous version"></button>
+                        <span class="version-counter"></span>
+                        <button class="nav-btn next-btn" onclick="changePart('tasks', 1)" title="Next version"></button>
+                    </div>
+                </div>
+
+                <div class="section assessment collapsible-section collapsed">
+                    <div class="section-header">
+                        <h3>4. Assessment Criteria</h3>
+                        <div class="section-controls">
+                            <div class="adjusting-indicator" id="adjusting-4">
+                                <span class="adjusting-icon">✏️</span>
+                                <span class="adjusting-text">adjusting content...</span>
+                            </div>
+                            <button class="card-btn view" title="View full screen">👁️</button>
+                            <button class="customize-btn" data-section="4">Customize</button>
+                            <div class="loading-indicator" id="loading-4">Applying changes...</div>
+                        </div>
+                    </div>
+                    <div class="part-container" id="assessment-container"></div>
+                    <div class="nav-buttons">
+                        <div class="section-quick-customizations" data-section="4">
+                            <!-- Quick customization buttons will be added dynamically -->
+                        </div>
+                        <button class="nav-btn prev-btn" onclick="changePart('assessment', -1)" title="Previous version"></button>
+                        <span class="version-counter"></span>
+                        <button class="nav-btn next-btn" onclick="changePart('assessment', 1)" title="Next version"></button>
+                    </div>
+                </div>
+
+                <div class="section materials collapsible-section collapsed">
+                    <div class="section-header">
+                        <h3>5. Materials and Resources</h3>
+                        <div class="section-controls">
+                            <div class="adjusting-indicator" id="adjusting-5">
+                                <span class="adjusting-icon">✏️</span>
+                                <span class="adjusting-text">adjusting content...</span>
+                            </div>
+                            <button class="card-btn view" title="View full screen">👁️</button>
+                            <button class="customize-btn" data-section="5">Customize</button>
+                            <div class="loading-indicator" id="loading-5">Applying changes...</div>
+                        </div>
+                    </div>
+                    <div class="part-container" id="materials-container"></div>
+                    <div class="nav-buttons">
+                        <div class="section-quick-customizations" data-section="5">
+                            <!-- Quick customization buttons will be added dynamically -->
+                        </div>
+                        <button class="nav-btn prev-btn" onclick="changePart('materials', -1)" title="Previous version"></button>
+                        <span class="version-counter"></span>
+                        <button class="nav-btn next-btn" onclick="changePart('materials', 1)" title="Next version"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tips-overlay">
+        <div class="tips-card">
+            <div class="tips-card-header">
+                <h3>Tips & Suggestions</h3>
+                <span class="toggle-icon">▾</span>
+            </div>
+            <div class="tips-card-content collapsed">
+                <div class="tip-group">
+                    <h4>Class Setup</h4>
+                    <p>I have 25 students in my class...</p>
+                    <p>They're in 5th grade...</p>
+                    <p>The class has mixed language levels...</p>
+                    <p>We have a standard classroom setup...</p>
+                </div>
+                <div class="tip-group">
+                    <h4>Student Profile</h4>
+                    <p>Most students are at B1 level...</p>
+                    <p>They know the basics about this topic...</p>
+                    <p>They learn best with visuals...</p>
+                    <p>Many are from different countries...</p>
+                </div>
+                <div class="tip-group">
+                    <h4>Available Tools</h4>
+                    <p>We have an interactive whiteboard...</p>
+                    <p>Each student can use a tablet...</p>
+                    <p>Lessons are 45 minutes long...</p>
+                    <p>There's a teaching assistant...</p>
+                </div>
+                <div class="tip-group">
+                    <h4>Learning Focus</h4>
+                    <p>Need to practice speaking more...</p>
+                    <p>Want to build subject vocabulary...</p>
+                    <p>They work well in groups...</p>
+                    <p>Prefer peer feedback...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html> 
