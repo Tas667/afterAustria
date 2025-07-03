@@ -12,8 +12,13 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-main);
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 20px 20px;
+    color: var(--text-primary);
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -21,6 +26,9 @@ body {
     padding: 2rem;
     position: relative;
     overflow-x: hidden;
+    height: 100%;
+    margin: 0;
+    line-height: 1.6;
 }
 
 /* Grid background */
@@ -58,9 +66,11 @@ body::after {
 }
 
 .book-container {
+    padding-top: 60px; /* Account for the fixed header height */
     display: flex;
+    height: calc(100vh - 60px);
+    box-sizing: border-box;
     gap: 1.5rem;
-    padding: 2rem;
     max-width: 1800px;
     width: 95%;
     margin: 0 auto;
@@ -72,7 +82,7 @@ body::after {
 }
 
 .main-content {
-    flex: 1;
+    flex-grow: 1;
     min-width: 700px;
     max-width: 1100px;
     padding: 0;
@@ -691,10 +701,11 @@ body::after {
     width: 320px;
     flex-shrink: 0;
     position: sticky;
-    top: 2rem;
-    height: calc(100vh - 4rem);
+    top: 2rem; /* Changed from 4rem to match .helper-column's sticky top */
+    height: calc(100vh - 6rem); /* Adjusted: 100vh - (new top 2rem + new padding-top 2rem + body's top padding 2rem assumed) */
     overflow-y: auto;
     padding-right: 0.5rem;
+    padding-top: 2rem; /* Added internal padding to offset content */
     margin-top: 0;
     display: flex;
     flex-direction: column;
@@ -861,6 +872,7 @@ body::after {
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
+    align-items: center; /* Align items vertically */
 }
 
 .modifier-checkbox {
@@ -2122,19 +2134,35 @@ body::after {
 .chatbot-header h3,
 .input-header h3 {
     margin: 0;
-    margin-right: 60px;
+    margin-right: 60px; /* Ensure space for controls if any */
     font-size: 16px;
     font-weight: normal;
     color: #495057;
 }
 
+/* Ensure .input-header can be a positioning context for the icon */
+.input-header {
+    position: relative; /* Add this if not already present */
+    display: flex; /* Helps align h3 and icon if needed, but absolute positioning is primary */
+    align-items: center; /* Vertical alignment for flex items */
+}
+
+/* Positioning for the info tooltip trigger specifically within .input-header */
+.input-header > .info-tooltip-trigger {
+    position: absolute;
+    right: 8px; /* Position from the right edge of the header */
+    top: 50%;
+    transform: translateY(-50%); /* Precise vertical centering */
+    z-index: 3; /* Ensure it's above header background */
+}
+
 .chatbot-messages {
-    flex: 1;
-    overflow-y: auto;
     padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    overflow-y: auto;
+    flex-grow: 1;
+    resize: vertical;
+    min-height: 300px;
+    border-bottom: 2px solid #eee;
 }
 
 .chat-message {
@@ -2263,11 +2291,12 @@ body::after {
 }
 
 .chat-send-btn {
-    background: #2196F3;
+    background-color: #2196F3;
+    color: white;
     border: none;
+    border-radius: 8px;
     width: 40px;
     height: 40px;
-    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2285,6 +2314,45 @@ body::after {
 .chat-send-btn:hover {
     background: #1976d2;
     transform: translateY(-1px);
+}
+
+.chat-controls {
+    display: flex;
+    align-items: center;
+}
+
+.chat-use-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 10px;
+}
+
+.chat-use-btn svg {
+    width: 18px;
+    height: 18px;
+    color: white;
+}
+
+.chat-use-btn:hover {
+    background: #43A047;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.chat-use-btn.clicked {
+    background: #388E3C;
+    transform: scale(0.95);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: all 0.1s ease;
 }
 
 .chat-context-inputs {
@@ -2447,6 +2515,19 @@ body::after {
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 0;
+    position: absolute; /* Ensure this is set if not already */
+    right: 8px;         /* Original position */
+    top: 50%;           /* Align vertically in header */
+    transform: translateY(-50%); /* Precise vertical centering */
+}
+
+/* Positioning for the info tooltip trigger specifically within .chatbot-header */
+.chatbot-header > .info-tooltip-trigger {
+    position: absolute;
+    right: 46px; /* (32px width of settings_btn + 8px its_right_offset + 6px gap) */
+    top: 50%;    /* Align vertically with settings button */
+    transform: translateY(-50%); /* Precise vertical centering */
+    z-index: 3; /* Ensure it's above header background but potentially below dropdowns */
 }
 
 .chat-settings-btn svg {
@@ -2612,14 +2693,41 @@ body::after {
 }
 
 .pareto-printable, .socratic-questions, .writing-exercises {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    margin: 1rem 0;
-    border-radius: 6px;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+    border-left: none;
 }
 
-.pareto-printable {
-    border-left: 4px solid #2196F3;
+.info-point {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.example-questions {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+}
+
+.example-questions li {
+    padding: 0;
+    margin: 0.5rem 0;
+    background: transparent;
+    border-radius: 0;
+}
+
+.writing-types {
+    margin-bottom: 1rem;
+}
+
+.exercise-tasks .task {
+    padding: 0;
+    margin: 0.8rem 0;
+    background: transparent;
+    border-radius: 0;
 }
 
 .info-points {
@@ -2729,20 +2837,38 @@ body::after {
 }
 
 .collapsible-section.collapsed .chat-settings-btn {
-    display: none;
+    display: block; /* Changed from 'none' to 'block' to keep it visible when collapsed */
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
+/* Remove the collapse-toggle styles since we're not using it anymore */
 .collapse-toggle {
+    display: none; /* Hide all collapse-toggle buttons */
+}
+
+.chat-settings-btn {
     position: absolute;
     right: 8px;
     top: 10px;
     z-index: 2;
-    pointer-events: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s;
 }
 
-.collapsible-section.collapsed .collapse-toggle {
-    top: 50%;
-    transform: translateY(-50%);
+.chat-settings-btn:hover {
+    opacity: 1;
 }
 
 .chatbot-header h3,
@@ -2914,7 +3040,7 @@ body::after {
 
 .step-elements {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 1fr;
     gap: 10px;
     margin-top: 10px;
 }
@@ -2959,5 +3085,562 @@ body::after {
     .step-elements {
         grid-template-columns: 1fr;
     }
+}
+
+/* Info Tooltip Styles */
+/* Styles for the trigger element (the icon) */
+.info-tooltip-trigger {
+    display: inline-flex; 
+    align-items: center;  
+    justify-content: center; 
+    width: 20px; 
+    height: 20px; 
+    border-radius: 50%;
+    color: #FF7043; /* New Orange Icon Color */
+    margin-left: 2px; /* Reduced from 6px */
+    cursor: help;
+    border: 1px solid rgba(255, 112, 67, 0.4); /* Adjusted Orange Border Color */
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    vertical-align: middle;
+    user-select: none;
+    box-sizing: border-box; 
+    animation: tooltip-pulse-animation 2s infinite;
+}
+
+.info-tooltip-trigger svg {
+    width: 14px; 
+    height: 14px;
+    display: block; 
+}
+
+.info-tooltip-trigger:hover {
+    background-color: rgba(255, 112, 67, 0.1); /* Light Orange Background on hover */
+    border-color: rgba(255, 112, 67, 0.6);
+}
+
+/* Animation for pulsing */
+@keyframes tooltip-pulse-animation {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 112, 67, 0.5); /* Orange Pulse Color */
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(255, 112, 67, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 112, 67, 0);
+    }
+}
+
+/* Stop pulsing animation if tooltip has been shown */
+.info-tooltip-trigger[data-tooltip-shown="true"] {
+    animation: none;
+    color: #757575; /* Neutral gray for the icon/SVG content */
+    background-color: transparent;
+    border-color: rgba(0, 0, 0, 0.2); /* Light gray border */
+    box-shadow: none; /* Ensure no lingering pulse shadow */
+}
+
+/* Styles for the tooltip content box (appended to body) */
+.tooltip-content {
+    position: absolute; /* Positioned by JavaScript */
+    visibility: hidden; /* Initially hidden, shown by JavaScript */
+    opacity: 0;         /* Initially transparent, shown by JavaScript */
+    background-color: white;
+    color: #333;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12px;    /* Base font size */
+    font-weight: normal;
+    line-height: 1.4;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out; /* Smooth fade */
+    pointer-events: auto; /* Allow interaction if needed, like clicking links inside */
+    max-width: 250px; /* Default max-width */
+    width: auto; /* Allow content to define width up to max-width */
+    white-space: normal; /* Allow text to wrap */
+    /* z-index will be set by JavaScript to ensure it's on top */
+}
+
+/* Arrow styling using pseudo-elements */
+.tooltip-content::before, .tooltip-content::after {
+    content: "";
+    position: absolute;
+    border-style: solid;
+    border-width: 6px;
+    width: 0;
+    height: 0;
+}
+
+.tooltip-content::before { /* Border part of the arrow */
+    border-color: transparent;
+}
+
+.tooltip-content::after { /* Fill part of the arrow */
+    border-color: transparent;
+}
+
+/* Top orientation: arrow points down */
+.tooltip-content.orient-top::before {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-top-color: rgba(0, 0, 0, 0.1); /* Match border color */
+}
+.tooltip-content.orient-top::after {
+    top: calc(100% - 1px); /* Slightly offset for border effect */
+    left: 50%;
+    transform: translateX(-50%);
+    border-top-color: white; /* Match background color */
+}
+
+/* Bottom orientation: arrow points up */
+.tooltip-content.orient-bottom::before {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+.tooltip-content.orient-bottom::after {
+    bottom: calc(100% - 1px);
+    left: 50%;
+    transform: translateX(-50%);
+    border-bottom-color: white;
+}
+
+/* Left orientation: arrow points right */
+.tooltip-content.orient-left::before {
+    top: var(--arrow-top-offset, 50%); /* Use CSS variable, fallback to 50% */
+    left: 100%;
+    transform: translateY(-50%);
+    border-left-color: rgba(0, 0, 0, 0.1);
+}
+.tooltip-content.orient-left::after {
+    top: var(--arrow-top-offset, 50%); /* Use CSS variable, fallback to 50% */
+    left: calc(100% - 1px);
+    transform: translateY(-50%);
+    border-left-color: white;
+}
+
+/* Right orientation: arrow points left */
+.tooltip-content.orient-right::before {
+    top: var(--arrow-top-offset, 50%); /* Use CSS variable, fallback to 50% */
+    right: 100%;
+    transform: translateY(-50%);
+    border-right-color: rgba(0, 0, 0, 0.1);
+}
+.tooltip-content.orient-right::after {
+    top: var(--arrow-top-offset, 50%); /* Use CSS variable, fallback to 50% */
+    right: calc(100% - 1px);
+    transform: translateY(-50%);
+    border-right-color: white;
+}
+
+
+/* Make sure tooltips are visible even when parent is collapsed */
+/* These might be less necessary now with body appending, but good for reference */
+.collapsible-section.collapsed .info-tooltip-trigger {
+    /* Ensure the trigger itself is visible if needed, though JS handles content */
+}
+
+/* Position tooltips in section headers */
+.section-header h3 .info-tooltip-trigger {
+    /* No special positioning needed for trigger usually */
+}
+
+
+/* Wide tooltip style - applied by JS to the .tooltip-content element */
+.tooltip-content.wide-tooltip {
+    max-width: 400px !important; /* Increased max-width */
+    font-size: 13px !important; /* Slightly larger font for readability */
+    line-height: 1.5 !important;
+    padding: 12px 15px !important;
+}
+
+/* Styling for HTML lists within tooltips */
+.tooltip-content ul {
+    list-style-type: disc;
+    margin: 5px 0 5px 20px; /* Top, Right, Bottom, Left */
+    padding: 0;
+}
+
+.tooltip-content li {
+    margin-bottom: 3px;
+}
+
+/* Styling for nested lists within tooltips */
+.tooltip-content ul ul {
+    list-style-type: circle;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+.tooltip-content strong {
+    font-weight: bold;
+}
+
+/* REMOVE OLD TOOLTIP STYLES that might conflict */
+/* The following styles are for the OLD .info-tooltip which was both trigger and container */
+/* And old .tooltip-content when it was a child */
+/* Search for ".info-tooltip {" and ".tooltip-content {" lines 3102-3145 and review/remove if they are for the old system */
+/* Specifically, remove transform, old position, left, bottom, etc. from the old .tooltip-content if it was styled as a child */
+
+/* Elements explanation text */
+.elements-explanation {
+    font-style: italic;
+    color: #555;
+    margin: 15px 0;
+    padding: 0 10px;
+    text-align: center;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.learning-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.learning-section:nth-child(2) {
+    border-left-color: #9C27B0;
+}
+
+.learning-section:nth-child(3) {
+    border-left-color: #4CAF50;
+}
+
+.info-item, .writing-item {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.info-item:last-child, .writing-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Simplified question list styling */
+.question-list {
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    list-style-type: disc;
+}
+
+.question-list li {
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+}
+
+/* Question types styling */
+.question-types {
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+/* Make the info points more streamlined */
+.info-points {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.info-item {
+    padding: 0;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    background: transparent;
+    border-bottom: 1px solid #eee;
+}
+
+.info-item h5 {
+    margin-bottom: 0.3rem;
+    color: #333;
+    font-size: 1rem;
+}
+
+.info-item p {
+    margin: 0;
+    color: #555;
+    line-height: 1.4;
+}
+
+/* Writing items styling */
+.writing-item {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.writing-item h5 {
+    margin-bottom: 0.3rem;
+    color: #333;
+    font-size: 1rem;
+}
+
+.writing-item p {
+    margin: 0;
+    color: #555;
+    line-height: 1.4;
+}
+
+/* Alpha Version Popup Styles */
+.alpha-version-popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 3000;
+    justify-content: center;
+    align-items: center;
+}
+
+.alpha-version-popup.active {
+    display: flex;
+}
+
+.alpha-popup-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    animation: popup-appear 0.4s ease;
+}
+
+@keyframes popup-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.alpha-popup-content h2 {
+    color: #333;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.alpha-popup-body {
+    color: #444;
+}
+
+.alpha-popup-body p {
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.alpha-popup-body h3 {
+    color: #333;
+    margin: 1.5rem 0 0.75rem;
+    font-size: 1.2rem;
+}
+
+.alpha-popup-body ul {
+    list-style-type: none;
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.alpha-popup-body li {
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.alpha-popup-body li:before {
+    content: "•";
+    color: #666;
+    position: absolute;
+    left: -1.5rem;
+}
+
+.alpha-popup-body .thank-you {
+    margin-top: 1.5rem;
+    font-weight: 500;
+}
+
+.alpha-popup-close {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    margin-top: 2rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.alpha-popup-close:hover {
+    background-color: #0056b3;
+}
+
+/* Insight Card Title - to prevent long titles from breaking layout */
+.insight-card .tips-card-header h3 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1; 
+    min-width: 0; 
+}
+
+/* Ensure card controls have enough space and align items */
+.card-controls {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 0.3rem; /* Keeps a small gap between icons */
+    align-items: center; /* Vertically align items in card-controls */
+    flex-shrink: 0; /* Prevent controls from shrinking */
+}
+
+/* Specific adjustment for insight card header to ensure controls are not pushed out by a long title */
+.insight-card .tips-card-header {
+    padding: 1rem 1.2rem; 
+    background: var(--accent-light, #e3f2fd);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    display: flex; 
+    align-items: center;
+    position: relative; 
+    gap: 0.5rem; 
+    background: var(--accent-light, #f3e5f5); 
+    border-bottom: 1px solid rgba(156, 39, 176, 0.1);
+    padding-right: 95px; /* Increased padding to reserve space for card-controls (approx 90-100px wide) */
+}
+
+/* Ensure the toggle icon in the header does not grow or shrink, maintaining its size */
+.tips-card-header .toggle-icon {
+    flex-shrink: 0; 
+    position: static; 
+    transform: none;  
+    margin-left: 0; /* Remove/override previous margin-left: auto */
+}
+
+/* Styling for the wrapper spans if needed, e.g., for vertical alignment within card-controls */
+.header-tooltip-trigger-wrapper-helper,
+.header-tooltip-trigger-wrapper-insight {
+    display: inline-flex; /* To ensure it behaves well in a flex row */
+    align-items: center; /* Vertically align the icon within its wrapper */
+    /* margin-right: 2px; Optional: if a tiny bit more space is needed before the eye icon */
+}
+
+/* Custom Theme Input Styles */
+.custom-theme-modifier {
+    display: flex; /* Aligns well with other flex items in .prompt-modifiers */
+    flex-grow: 1; /* Allows it to take available space if needed */
+    margin-left: 0.5rem; /* Adds a little space from the last checkbox */
+}
+
+#custom-theme-input {
+    width: 100%; /* Take full width of its parent .custom-theme-modifier */
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #444;
+    background-color: #f5f5f5;
+    transition: all 0.2s ease;
+}
+
+#custom-theme-input::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+#custom-theme-input:focus {
+    outline: none;
+    border-color: #2196F3;
+    background-color: white;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* New Editor Header Styles */
+.editor-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    z-index: 1001; /* Ensure it's above other content */
+    box-sizing: border-box;
+}
+
+.editor-header .back-link {
+    color: #5f6368;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.editor-header .back-link:hover {
+    text-decoration: underline;
+}
+
+#lesson-title {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #202124;
+    font-size: 18px;
+    font-weight: 500;
+    text-align: center;
+    flex-grow: 1;
+    margin: 0 20px;
+    padding: 5px 10px;
+    transition: border-color 0.2s;
+}
+
+#lesson-title:hover {
+    border-color: #dadce0;
+}
+
+#lesson-title:focus {
+    outline: none;
+    border-color: #8ab4f8;
+    background-color: #f8f9fa;
+}
+
+#save-lesson-btn {
+    background-color: #1a73e8;
+    color: #ffffff;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#save-lesson-btn:hover {
+    background-color: #287ae6;
 }
   

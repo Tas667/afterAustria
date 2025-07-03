@@ -29,6 +29,14 @@
   - Enhanced context gathering capabilities
   - Improved response formatting
 
+- Tooltip System
+  - Added informational tooltips to provide context-sensitive help
+  - Implemented tooltips for section headers and slider controls
+  - Ensured tooltips remain visible even in collapsed sections
+  - Added proper z-index management for tooltip visibility
+  - Prevented duplicate tooltips from being created
+  - Added tooltips to CLIL Assistant card header, Generate Activity card header, theme modifiers section, 5 main pillar headers, version counters, helper card headers, and insight card headers.
+
 ### Modified
 - Backend Updates
   - Updated `app.py` with new activity type definitions
@@ -43,6 +51,15 @@
   - Improved responsive design for better usability
   - Added collapsible settings panel
   - Improved settings persistence
+
+- Tooltip System Enhancements
+  - Switched to SVG icons for tooltip triggers.
+  - Implemented pulsing animation for unviewed tooltips and style change for viewed tooltips (orange to gray).
+  - Tooltip content now appended to `document.body` to prevent clipping and ensure high z-index.
+  - Improved dynamic positioning logic, including robust viewport boundary adjustments and refined arrow alignment using CSS custom properties (`--arrow-top-offset`).
+  - Enhanced support for HTML content within tooltips.
+  - Added `wide-tooltip` class for specific tooltips needing more width.
+  - Resolved various positioning and styling issues, including icon placement in card headers and title truncation conflicts.
 
 ### Technical Details
 - Model Configuration
@@ -75,6 +92,13 @@
   - Improved context display
   - Enhanced error state handling
   - More intuitive user input handling
+
+- Tooltip System
+  - Non-intrusive SVG information icons with hover/pulse effect.
+  - Contextual help for complex features with HTML support.
+  - Tooltips render above all elements and adjust to viewport.
+  - Consistent styling with visual feedback for viewed state.
+  - Improved user guidance through strategically placed tooltips across the application.
 
 ## [Future Plans]
 - Enhanced activity type filtering

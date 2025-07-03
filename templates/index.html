@@ -7,6 +7,32 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <header class="editor-header">
+        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        <input type="text" id="lesson-title" value="Untitled Lesson">
+        <button id="save-lesson-btn">Save</button>
+    </header>
+    <!-- Alpha Version Popup -->
+    <div id="alpha-version-popup" class="alpha-version-popup">
+        <div class="alpha-popup-content">
+            <h2>🔧 Alpha Version Notice</h2>
+            <div class="alpha-popup-body">
+                <p>Welcome! You're using an Alpha version of this application.</p>
+                <p>This pre-release build is intended for internal testing and feedback only.</p>
+                
+                <h3>Please note:</h3>
+                <ul>
+                    <li>Features may be incomplete or change without notice</li>
+                    <li>Bugs, crashes, and performance issues are expected</li>
+                    <li>Your feedback is highly appreciated!</li>
+                </ul>
+                
+                <p class="thank-you">Thank you for helping us shape the future of this app. 🚀</p>
+                
+                <button id="alpha-popup-close" class="alpha-popup-close">I Understand</button>
+            </div>
+        </div>
+    </div>
     <div class="book-container">
         <div class="helper-column">
             <div class="helper-content">
@@ -18,7 +44,6 @@
             <div class="chatbot-card collapsible-section expanded">
                 <div class="chatbot-header">
                     <h3>CLIL Teaching Assistant</h3>
-                    <button class="collapse-toggle" title="Toggle section">▼</button>
                     <button id="chat-settings-btn" class="chat-settings-btn" title="Chat Settings">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="3"></circle>
@@ -41,12 +66,20 @@
                             </svg>
                         </button>
                     </div>
-                    <button id="send-chat" class="chat-send-btn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
+                    <div class="chat-controls">
+                        <button id="send-chat" class="chat-send-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                        <button id="use-response" class="chat-use-btn" title="Use this response in generator">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="chat-context-inputs collapsed">
                     <div class="context-header">
@@ -166,7 +199,6 @@
             <div class="input-section collapsible-section expanded">
                 <div class="input-header">
                     <h3>Generate Activity</h3>
-                    <button class="collapse-toggle" title="Toggle section">▼</button>
                 </div>
                 <div class="input-container">
                     <textarea id="prompt-input" placeholder="Describe the CLIL activity you want to create (e.g., 'Create a science activity about photosynthesis for 5th grade students')"></textarea>
@@ -191,22 +223,24 @@
                         </label>
                         <label class="modifier-checkbox">
                             <input type="checkbox" id="mod-mystery" value="mystery">
-                            <span>🔍 Detective Mystery</span>
+                            <span>🕵️ Detective Mystery</span>
                         </label>
                         <label class="modifier-checkbox">
                             <input type="checkbox" id="mod-music" value="music">
-                            <span>🎵 Musical Journey</span>
+                            <span>🎶 Musical Journey</span>
                         </label>
-                        <label class="modifier-checkbox">
-                            <input type="checkbox" id="mod-food" value="food">
-                            <span>🍳 Cooking Adventure</span>
-                        </label>
+                        
+                        <div class="custom-theme-modifier">
+                            <input type="text" id="custom-theme-input" placeholder="Or type your own theme...">
+                        </div>
                     </div>
                     <button id="generate-btn" class="action-btn">Generate Activity</button>
                 </div>
             </div>
 
             <div class="character-section">
+                <p class="elements-explanation">Below are the core elements of the plan, you can make a High-Level Overhaul of each one using predefined ideas at the bottom, create your own High-Level Overhaul using the customization button, or click on the eye icon 👁️ to open edit mode, where you can create precise edits manually or using an inline AI using "/"</p>
+                
                 <div class="section content-objectives collapsible-section collapsed">
                     <div class="section-header">
                         <h3>1. Content Objectives</h3>
@@ -305,7 +339,7 @@
 
                 <div class="section materials collapsible-section collapsed">
                     <div class="section-header">
-                        <h3>5. Materials and Resources</h3>
+                        <h3>5. Text Deep Learning</h3>
                         <div class="section-controls">
                             <div class="adjusting-indicator" id="adjusting-5">
                                 <span class="adjusting-icon">✏️</span>
@@ -331,45 +365,24 @@
     </div>
 
     <div class="tips-overlay">
-        <div class="tips-card">
+        <div class="insight-card">
             <div class="tips-card-header">
-                <h3>Tips & Suggestions</h3>
+                <h3>Insights</h3>
                 <span class="toggle-icon">▾</span>
             </div>
             <div class="tips-card-content collapsed">
-                <div class="tip-group">
-                    <h4>Class Setup</h4>
-                    <p>I have 25 students in my class...</p>
-                    <p>They're in 5th grade...</p>
-                    <p>The class has mixed language levels...</p>
-                    <p>We have a standard classroom setup...</p>
-                </div>
-                <div class="tip-group">
-                    <h4>Student Profile</h4>
-                    <p>Most students are at B1 level...</p>
-                    <p>They know the basics about this topic...</p>
-                    <p>They learn best with visuals...</p>
-                    <p>Many are from different countries...</p>
-                </div>
-                <div class="tip-group">
-                    <h4>Available Tools</h4>
-                    <p>We have an interactive whiteboard...</p>
-                    <p>Each student can use a tablet...</p>
-                    <p>Lessons are 45 minutes long...</p>
-                    <p>There's a teaching assistant...</p>
-                </div>
-                <div class="tip-group">
-                    <h4>Learning Focus</h4>
-                    <p>Need to practice speaking more...</p>
-                    <p>Want to build subject vocabulary...</p>
-                    <p>They work well in groups...</p>
-                    <p>Prefer peer feedback...</p>
-                </div>
+                <!-- Empty insight card content -->
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Load auth script first to make auth object available globally -->
+    <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script>
+        // Pass lesson_id from Flask template to our main script
+        let lessonId = "{{ lesson_id or '' }}";
+    </script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html> 

@@ -369,6 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event listener for generate button
     document.getElementById('generate-btn').addEventListener('click', generateActivity);
     
+    // Add event listener for save button
+    document.getElementById('save-lesson-btn')?.addEventListener('click', saveLesson);
+
     // Add event listeners for view buttons in main sections
     document.querySelectorAll('.section .card-btn.view').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -382,7 +385,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const modalTitle = modal.querySelector('.modal-header h2');
             
             modalTitle.textContent = title;
-            modalContent.innerHTML = container.innerHTML;
+            
+            // Extract the content from the section-content div if it exists
+            const sectionContent = container.querySelector('.section-content');
+            if (sectionContent) {
+                modalContent.innerHTML = sectionContent.innerHTML;
+            } else {
+                modalContent.innerHTML = container.innerHTML;
+            }
+            
             modal.dataset.currentSection = container.id;
             modal.classList.add('active');
             
@@ -656,7 +667,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update the content in generatedSections array
                 const sectionKey = sectionId.replace('-container', '');
                 if (generatedSections[sectionKey]) {
-                    generatedSections[sectionKey][currentIndices[sectionKey]] = content;
+                    console.log(`Saving content for section ${sectionKey}, index ${currentIndices[sectionKey]}`);
+                    
+                    // Store the raw content without section-content wrapper
+                    if (content.includes('section-content')) {
+                        // Extract content from within section-content div
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = content;
+                        const sectionContent = tempDiv.querySelector('.section-content');
+                        if (sectionContent) {
+                            generatedSections[sectionKey][currentIndices[sectionKey]] = sectionContent.innerHTML;
+                        } else {
+                            generatedSections[sectionKey][currentIndices[sectionKey]] = content;
+                        }
+                    } else {
+                        generatedSections[sectionKey][currentIndices[sectionKey]] = content;
+                    }
+                    
+                    // Ensure the content is saved properly by logging it
+                    console.log(`Saved content length: ${generatedSections[sectionKey][currentIndices[sectionKey]].length} characters`);
+                    
+                    // Force update the display to ensure changes are visible
+                    updateSectionDisplay(sectionKey);
+                } else {
+                    console.warn(`Section ${sectionKey} not found in generatedSections`);
                 }
                 
                 // Re-attach click handlers to any tags in the main section
@@ -897,6 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const text = decoder.decode(value);
                     generatedText += text;
+                    
                     // Use the formatContent function to properly format the text
                     // This will convert markdown to HTML and handle lists, tables, etc.
                     generatedSpan.innerHTML = formatContent(generatedText);
@@ -904,6 +939,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Finalize generated content
                 generatedSpan.classList.remove('generating-text');
+                
+                // Ensure the content is properly formatted in the DOM
+                // This helps with saving the content later
+                if (generatedSpan.innerHTML !== formatContent(generatedText)) {
+                    generatedSpan.innerHTML = formatContent(generatedText);
+                }
                 
                 // Clean up
                 closeCommandPrompt();
@@ -1037,7 +1078,7 @@ function openCustomizePanel(section, event) {
         '2': 'Language Objectives',
         '3': 'Learning Tasks',
         '4': 'Assessment Criteria',
-        '5': 'Materials and Resources'
+        '5': 'Text Deep Learning'
     };
     
     document.querySelector('.panel-header h2').textContent = 
@@ -1084,76 +1125,12 @@ function handleCustomization() {
 // Helper function to detect and format content type
 function formatContent(text) {
     if (!text) return '';
-
-    // Pre-process the text to ensure consistent line breaks
-    text = text.replace(/\r\n/g, '\n').trim();
-
-    // Detect content structure
-    const hasKeyPoints = text.includes(':') && text.split('\n').some(line => line.trim().endsWith(':'));
-    const hasBulletPoints = text.includes('•') || text.includes('-');
-    const hasNumberedList = text.match(/^\d+\./m);
-    const hasHeaders = text.match(/^[A-Z][^:]+:(?:\s|$)/m);
-
-    // Store code blocks to prevent them from being processed
-    const codeBlocks = [];
-    text = text.replace(/```[\s\S]*?```/g, (match) => {
-        codeBlocks.push(match);
-        return `CODE_BLOCK_${codeBlocks.length - 1}`;
-    });
-
-    if (hasHeaders) {
-        // Format section headers consistently
-        text = text.replace(/^([A-Z][^:]+):(?:\s|$)/gm, '### $1\n');
-    }
-
-    if (hasKeyPoints) {
-        // Format key points with proper spacing
-        text = text.replace(/^([^:\n]+):\s*$/gm, '### $1\n');
-    }
-
-    if (hasBulletPoints) {
-        // Normalize bullet points
-        text = text.replace(/^[•-]\s+/gm, '- ');
-        // Add spacing around lists
-        text = text.replace(/(\n- .*?)(\n[^-\n])/g, '$1\n\n$2');
-    }
-
-    if (hasNumberedList) {
-        // Ensure proper spacing around numbered lists
-        text = text.replace(/(\n\d+\. .*?)(\n[^\d\n])/g, '$1\n\n$2');
-    }
-
-    // Restore code blocks
-    text = text.replace(/CODE_BLOCK_(\d+)/g, (_, index) => codeBlocks[index]);
-
-    // Configure marked options
-    marked.setOptions({
-        gfm: true,
-        breaks: true,
-        headerIds: false,
-        mangle: false,
-        sanitize: true,
-        smartLists: true,
-        smartypants: true,
-        xhtml: true
-    });
-
-    // Convert to HTML
-    let html = marked.parse(text);
-
-    // Post-process the HTML
-    html = html
-        // Add classes to headers
-        .replace(/<h([1-6])>/g, '<h$1 class="content-header level-$1">')
-        // Add classes to lists
-        .replace(/<ul>/g, '<ul class="content-list">')
-        .replace(/<ol>/g, '<ol class="content-list">')
-        // Add classes to paragraphs
-        .replace(/<p>/g, '<p class="content-paragraph">')
-        // Format strong tags that look like headers
-        .replace(/<p><strong>([^<]+):<\/strong>/g, '<h4 class="content-subheader">$1:</h4>');
-
-    return `<div class="formatted-content">${html}</div>`;
+    
+    // Pre-process markdown to fix common issues
+    text = fixMarkdownPatterns(text);
+    
+    // Use marked to convert markdown to HTML
+    return marked.parse(text);
 }
 
 // Update the existing formatting functions to use the new formatter
@@ -1413,6 +1390,9 @@ function getCurrentActivityState() {
 
 // Add formatting helper function
 function formatCustomResponse(text) {
+    // Pre-process text to fix common patterns that get misinterpreted as code blocks
+    text = fixMarkdownPatterns(text);
+    
     // Configure marked options for security and features
     marked.setOptions({
         gfm: true, // GitHub Flavored Markdown
@@ -1422,11 +1402,34 @@ function formatCustomResponse(text) {
         sanitize: true, // Sanitize HTML input
         smartLists: true, // Use smarter list behavior
         smartypants: true, // Use smart punctuation
-        xhtml: true // Use XHTML style tags
+        xhtml: true, // Use XHTML style tags
+        pedantic: false // Less strict parsing (helps with indented lists)
     });
 
     // Convert markdown to HTML
     return marked.parse(text);
+}
+
+// Add a helper function to fix markdown patterns that might be misinterpreted
+function fixMarkdownPatterns(text) {
+    if (!text) return text;
+    
+    // Fix indented lists (4+ spaces followed by a dash or asterisk)
+    text = text.replace(/^(\s{4,})([*-])/gm, '  $2');
+    
+    // Fix blank lines in lists that cause list restart
+    text = text.replace(/^([*-]\s.+)(\n\n)([*-]\s)/gm, '$1\n$3');
+    
+    // Fix mixed list markers
+    text = text.replace(/^([*-]\s.+\n)([*-]\s)/gm, '$1$2');
+    
+    // Fix indented text blocks that get interpreted as code blocks
+    text = text.replace(/^(\s{4,})([^*-\s])/gm, '$2');
+    
+    // Fix multiple consecutive indented lines
+    text = text.replace(/^\s{4,}(.+)$/gm, '$1');
+    
+    return text;
 }
 
 // Add helper content handling
@@ -1434,6 +1437,11 @@ function createHelperCard(data) {
     const card = document.createElement('div');
     card.className = 'helper-card';
     card.dataset.cardId = `card-${Date.now()}`;
+    // Store the recipe for this card
+    card._cardData = {
+        type: 'helper',
+        recipe: data
+    };
     
     // Create overview section
     const overview = data.topic_overview;
@@ -1442,6 +1450,7 @@ function createHelperCard(data) {
             <h3>${overview.title}</h3>
             <span class="toggle-icon">▾</span>
             <div class="card-controls">
+                <span class="header-tooltip-trigger-wrapper-helper"></span>
                 <button class="card-btn view" title="View full screen">👁️</button>
             </div>
         </div>
@@ -1486,6 +1495,12 @@ function createHelperCard(data) {
     content += `</div>`;
     card.innerHTML = content;
     
+    // Add tooltip to helper card header
+    const helperHeaderTooltipWrapper = card.querySelector('.helper-card-header .card-controls .header-tooltip-trigger-wrapper-helper');
+    if (helperHeaderTooltipWrapper) {
+        createTooltip(helperHeaderTooltipWrapper, "This card provides a general overview, teaching aspects, and resources for the main activity topic. Explore the tags for deeper insights on specific concepts.", 'right');
+    }
+    
     // Add click handler for collapse/expand
     const header = card.querySelector('.helper-card-header');
     const content_div = card.querySelector('.helper-card-content');
@@ -1523,12 +1538,18 @@ function createInsightCard(data) {
     const card = document.createElement('div');
     card.className = 'tips-card insight-card';
     card.dataset.cardId = `card-${Date.now()}`;
+    // Store the recipe for this card
+    card._cardData = {
+        type: 'insight',
+        recipe: data
+    };
     
     const content = `
         <div class="tips-card-header">
             <h3>${data.title}</h3>
             <span class="toggle-icon">▾</span>
             <div class="card-controls">
+                <span class="header-tooltip-trigger-wrapper-insight"></span>
                 <button class="card-btn view" title="View full screen">👁️</button>
                 <button class="card-btn close" title="Remove card">✕</button>
             </div>
@@ -1555,6 +1576,12 @@ function createInsightCard(data) {
     `;
     
     card.innerHTML = content;
+    
+    // Add tooltip to insight card header
+    const insightHeaderTooltipWrapper = card.querySelector('.tips-card-header .card-controls .header-tooltip-trigger-wrapper-insight');
+    if (insightHeaderTooltipWrapper) {
+        createTooltip(insightHeaderTooltipWrapper, "This card gives a focused explanation of the clicked tag, with practical tips and examples for your CLIL context.", 'right');
+    }
     
     // Add click handler for collapse/expand
     const header = card.querySelector('.tips-card-header');
@@ -1660,6 +1687,10 @@ async function generateActivity() {
     currentModifiers = Array.from(document.querySelectorAll('.modifier-checkbox input:checked'))
         .map(checkbox => checkbox.value);
     
+    // Get custom theme text
+    const customThemeInput = document.getElementById('custom-theme-input');
+    const customThemeText = customThemeInput ? customThemeInput.value.trim() : null;
+    
     // Show loading state
     document.getElementById('generate-btn').disabled = true;
     document.getElementById('generate-btn').textContent = 'Generating...';
@@ -1726,7 +1757,8 @@ async function generateActivity() {
                 },
                 body: JSON.stringify({ 
                     prompt,
-                    modifiers: currentModifiers
+                    modifiers: currentModifiers,
+                    custom_theme_text: customThemeText // Add custom theme text here
                 })
             }).then(r => r.json()),
             
@@ -1881,16 +1913,34 @@ function updateSectionDisplay(section) {
     const versions = generatedSections[section];
     const navButtons = container.parentElement.querySelector('.nav-buttons');
     const quickCustomizeContainer = container.parentElement.querySelector('.section-quick-customizations');
+    const versionCounterElement = navButtons.querySelector('.version-counter'); // Get the counter span
     
     if (!versions || versions.length === 0) {
         container.innerHTML = '<p class="empty-message">Generate an activity to see content</p>';
         navButtons.classList.remove('has-multiple');
         quickCustomizeContainer.classList.remove('visible');
+        // Remove version counter tooltip if no versions
+        const existingCounterIcon = versionCounterElement.nextElementSibling;
+        if (existingCounterIcon && existingCounterIcon.classList.contains('info-tooltip-trigger')) {
+            existingCounterIcon.remove();
+        }
+        if (versionCounterElement) versionCounterElement.textContent = '0/0'; // Show 0/0 if no content
         return;
     }
     
     const currentContent = versions[currentIndices[section]];
-    container.innerHTML = `<div class="section-content">${currentContent}</div>`;
+    
+    // Check if content already has section-content wrapper
+    if (currentContent && typeof currentContent === 'string') {
+        if (currentContent.includes('section-content')) {
+            container.innerHTML = currentContent;
+        } else {
+            container.innerHTML = `<div class="section-content">${currentContent}</div>`;
+        }
+    } else {
+        container.innerHTML = '<p class="empty-message">Content could not be loaded</p>';
+        console.error('Invalid content for section:', section, currentContent);
+    }
     
     // Update navigation buttons
     if (!navButtons.querySelector('.create-card-btn')) {
@@ -1924,22 +1974,37 @@ function updateSectionDisplay(section) {
         }
     }
     
-    // Update navigation buttons and counter
+    // Update navigation buttons and counter text
     const prevBtn = navButtons.querySelector('.prev-btn');
     const nextBtn = navButtons.querySelector('.next-btn');
-    const counter = navButtons.querySelector('.version-counter');
+    versionCounterElement.textContent = `${currentIndices[section] + 1}/${versions.length}`;
     
-    // Always show counter with at least 1/1
-    counter.textContent = `${currentIndices[section] + 1}/${versions.length}`;
+    // Manage version counter tooltip
+    const counterTooltipId = `version-counter-tooltip-wrapper-${section}`; // Unique ID for the wrapper
+    let iconWrapper = navButtons.querySelector(`#${counterTooltipId}`);
     
     if (versions.length > 1) {
         navButtons.classList.add('has-multiple');
         prevBtn.disabled = false;
         nextBtn.disabled = false;
+        if (!iconWrapper) {
+            iconWrapper = document.createElement('span'); 
+            iconWrapper.id = counterTooltipId;
+            iconWrapper.style.display = 'inline-flex'; // To align with other nav items
+            iconWrapper.style.alignItems = 'center';
+            versionCounterElement.after(iconWrapper); // Insert wrapper after counter
+            
+            const tooltipText = "Use the arrows to navigate through different generated or customized versions for this section.";
+            createTooltip(iconWrapper, tooltipText, 'top'); 
+            // The createTooltip function itself appends the .info-tooltip-trigger inside this iconWrapper
+        }
     } else {
         navButtons.classList.remove('has-multiple');
         prevBtn.disabled = true;
         nextBtn.disabled = true;
+        if (iconWrapper) {
+            iconWrapper.remove(); // Remove the wrapper, which also removes the icon inside
+        }
     }
 }
 
@@ -2132,20 +2197,36 @@ function createCardFromContent(section) {
         'language': 'Language Objectives',
         'tasks': 'Learning Tasks',
         'assessment': 'Assessment Criteria',
-        'materials': 'Materials and Resources'
+        'materials': 'Text Deep Learning'
+    };
+    const title = `Pillar Copy: ${sectionTitles[section] || section}`;
+    
+    // Use the new dedicated function to create the card
+    const card = createPillarCopyCard({ title: title, content: content });
+    
+    // Add the card to the helper column
+    const helperContent = document.querySelector('.helper-content');
+    helperContent.insertBefore(card, helperContent.firstChild);
+    
+    // Trigger animation
+    setTimeout(() => card.classList.add('visible'), 100);
+}
+
+// Function to create a card from a pillar copy
+function createPillarCopyCard(data) {
+    const card = document.createElement('div');
+    card.className = 'helper-card copied-pillar';
+    card.dataset.cardId = `card-${Date.now()}`;
+
+    // Store the recipe for this card
+    card._cardData = {
+        type: 'pillar_copy',
+        recipe: data
     };
     
-    const title = sectionTitles[section] || section;
-    
-    // Create a new helper card
-    const card = document.createElement('div');
-    card.className = 'helper-card';
-    card.dataset.cardId = `card-${Date.now()}`;
-    
-    // Create card content
     const cardHTML = `
         <div class="helper-card-header">
-            <h3>${title}</h3>
+            <h3>${data.title}</h3>
             <span class="toggle-icon">▾</span>
             <div class="card-controls">
                 <button class="card-btn view" title="View full screen">👁️</button>
@@ -2154,53 +2235,37 @@ function createCardFromContent(section) {
         </div>
         <div class="helper-card-content">
             <div class="helper-section">
-                ${content}
+                ${data.content}
             </div>
         </div>
     `;
-    
     card.innerHTML = cardHTML;
-    
-    // Add click handler for collapse/expand
+
     const header = card.querySelector('.helper-card-header');
     const contentDiv = card.querySelector('.helper-card-content');
-    
     header.addEventListener('click', (e) => {
-        if (!e.target.matches('.card-btn')) {
+        if (!e.target.closest('.card-btn')) {
             header.classList.toggle('collapsed');
             contentDiv.classList.toggle('collapsed');
         }
     });
-    
-    // Add view button handler
+
     card.querySelector('.card-btn.view').addEventListener('click', (e) => {
         e.stopPropagation();
-        const modal = document.querySelector('.content-modal');
-        const modalContent = modal.querySelector('.modal-content');
-        const modalTitle = modal.querySelector('.modal-header h2');
-        modalTitle.textContent = title;
-        modalContent.innerHTML = contentDiv.innerHTML;
-        modal.dataset.currentCard = card.dataset.cardId;
-        modal.classList.add('active');
+        openModal(contentDiv.innerHTML, data.title);
+        // Note: The modal's own save logic will handle updates.
     });
-    
-    // Add close button handler
+
     card.querySelector('.card-btn.close').addEventListener('click', (e) => {
         e.stopPropagation();
         card.remove();
     });
-    
-    // Add click handlers to all tags in the card
+
     card.querySelectorAll('.helper-tag').forEach(tag => {
         tag.addEventListener('click', handleTagClick);
     });
-    
-    // Add the card to the helper column
-    const helperContent = document.querySelector('.helper-content');
-    helperContent.insertBefore(card, helperContent.firstChild);
-    
-    // Trigger animation
-    setTimeout(() => card.classList.add('visible'), 100);
+
+    return card;
 }
 
 // Add styles for tag animations
@@ -2597,6 +2662,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendButton = document.getElementById('send-chat');
     const chatInput = document.getElementById('chat-input');
     const chatMicButton = document.getElementById('chat-mic-button');
+    const useResponseButton = document.getElementById('use-response');
     
     // Initialize speech recognition for chat
     if ('webkitSpeechRecognition' in window) {
@@ -2638,6 +2704,51 @@ document.addEventListener('DOMContentLoaded', function() {
     
     sendButton.addEventListener('click', handleChatSubmit);
     
+    // Add event listener for the use response button
+    useResponseButton.addEventListener('click', function() {
+        // Get the most recent chatbot response
+        const chatMessages = document.querySelectorAll('.chat-message:not(.user)');
+        if (chatMessages.length === 0) {
+            alert('No chatbot responses available to use');
+            return;
+        }
+        
+        // Get the most recent chatbot message
+        const latestChatbotMessage = chatMessages[chatMessages.length - 1];
+        const messageBubble = latestChatbotMessage.querySelector('.chat-bubble');
+        
+        // Get the raw text from the conversation history instead of the HTML
+        let messageText = '';
+        if (conversationHistory.length > 0) {
+            // Find the last assistant message
+            for (let i = conversationHistory.length - 1; i >= 0; i--) {
+                if (conversationHistory[i].role === 'assistant') {
+                    messageText = conversationHistory[i].content;
+                    break;
+                }
+            }
+        }
+        
+        // If we couldn't get it from history, fall back to text content
+        if (!messageText) {
+            messageText = messageBubble.textContent;
+        }
+        
+        // Set the generator input value
+        const promptInput = document.getElementById('prompt-input');
+        promptInput.value = messageText;
+        
+        // Scroll to the generator input and focus it
+        promptInput.scrollIntoView({ behavior: 'smooth' });
+        promptInput.focus();
+        
+        // Visual feedback for the button
+        useResponseButton.classList.add('clicked');
+        setTimeout(() => {
+            useResponseButton.classList.remove('clicked');
+        }, 300);
+    });
+    
     chatInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -2650,6 +2761,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function getContext() {
+    const contentLanguageBalance = document.getElementById('content-language-balance').value;
     return {
         class_context: {
             students_count: document.getElementById('students-count').value,
@@ -2659,7 +2771,13 @@ function getContext() {
         teaching_parameters: {
             vocab_density: document.getElementById('vocab-density').value,
             grammar_complexity: document.getElementById('grammar-complexity').value,
-            content_language_balance: document.getElementById('content-language-balance').value
+            content_language_balance: contentLanguageBalance
+        },
+        // Add a more explicit content vs language focus parameter
+        content_vs_language_focus: {
+            content_percentage: contentLanguageBalance,
+            language_percentage: 100 - parseInt(contentLanguageBalance),
+            description: `${contentLanguageBalance}% Content / ${100 - parseInt(contentLanguageBalance)}% Language Focus`
         },
         activity_types: Array.from(document.querySelectorAll('.activity-type-checkbox:checked'))
             .map(cb => cb.value)
@@ -2828,43 +2946,36 @@ function formatTextDeepLearning(content) {
     
     let html = `
         <div class="text-deep-learning-section">
-            <div class="pareto-printable">
-                <h4>Key Information About the Subject</h4>
-                <div class="info-points">
+            <div class="learning-section">
+                <h4>Key Information About the Subject (Pareto Principle 80/20)</h4>
+                <ul class="question-list">
                     ${content.pareto_printable.points.map((item, index) => `
-                        <div class="info-point">
-                            <h5>${index + 1}. ${item.point}</h5>
-                            <p>${item.explanation}</p>
-                        </div>
+                        <li><strong>${index + 1}. ${item.point}</strong>
+                        
+                        ${item.explanation}</li>
                     `).join('')}
-                </div>
+                </ul>
             </div>
             
-            <div class="socratic-questions">
-                <h4>Discussion Questions</h4>
-                <div class="question-types">
-                    <p><strong>Question Types:</strong> ${content.socratic_questions.question_types.join(', ')}</p>
-                </div>
-                <ul class="example-questions">
+            <div class="learning-section">
+                <h4>Socratic Questions</h4>
+                <p><strong>Question Types:</strong> ${content.socratic_questions.question_types.join(', ')}</p>
+                <ul class="question-list">
                     ${content.socratic_questions.example_questions.map(q => `
                         <li>${q}</li>
                     `).join('')}
                 </ul>
             </div>
             
-            <div class="writing-exercises">
+            <div class="learning-section">
                 <h4>Extended Writing Exercises</h4>
-                <div class="writing-types">
-                    <p><strong>Writing Types:</strong> ${content.extended_writing_exercises.writing_types.join(', ')}</p>
-                </div>
-                <div class="exercise-tasks">
-                    ${content.extended_writing_exercises.example_tasks.map(task => `
-                        <div class="task">
-                            <h5>${task.task}</h5>
-                            <p>${task.description}</p>
-                        </div>
-                    `).join('')}
-                </div>
+                <p><strong>Writing Types:</strong> ${content.extended_writing_exercises.writing_types.join(', ')}</p>
+                ${content.extended_writing_exercises.example_tasks.map(task => `
+                    <div class="writing-item">
+                        <h5>${task.task}</h5>
+                        <p>${task.description}</p>
+                    </div>
+                `).join('')}
             </div>
         </div>
     `;
@@ -2880,18 +2991,471 @@ function initCollapsibleSections() {
         const header = section.querySelector('.section-header, .chatbot-header, .input-header');
         
         if (header) {
-            header.addEventListener('click', () => {
+            header.addEventListener('click', (e) => {
+                // Don't collapse if clicking on the settings button or any button in the header
+                if (e.target.closest('.chat-settings-btn') || e.target.closest('button')) {
+                    return;
+                }
+                
                 section.classList.toggle('collapsed');
                 section.classList.toggle('expanded');
             });
         }
     });
+    
+    // Add specific event handler for the settings button to prevent event bubbling
+    const settingsBtn = document.getElementById('chat-settings-btn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Stop the event from bubbling up to the header
+        });
+    }
 }
 
 // Initialize collapsible sections when document is ready
 document.addEventListener('DOMContentLoaded', () => {
     initCollapsibleSections();
-    // ... existing initialization code ...
+    initializeTooltips(); // Initialize tooltips
+    
+    // Check if we are loading an existing lesson
+    if (lessonId) {
+        waitForAuth(() => {
+            window.auth.onAuthStateChanged(user => {
+                console.log("Auth state changed. User: ", user);
+                if (user) {
+                    loadLesson(lessonId);
+                } else {
+                    console.log("User not logged in, redirecting to login to load lesson.");
+                    window.location.href = '/login';
+                }
+            });
+        });
+    }
 });
 
 // ... rest of existing code ...
+
+// Add this global variable before the createTooltip function
+let activeTooltipContent = null;
+
+// Function to create tooltips
+function createTooltip(targetElement, tooltipText, position = 'top', isWide = false) {
+    // Check if element already has a tooltip trigger
+    if (targetElement.querySelector('.info-tooltip-trigger')) {
+        return null; 
+    }
+    
+    const triggerElement = document.createElement('span');
+    triggerElement.className = 'info-tooltip-trigger';
+    // Use SVG for the icon
+    triggerElement.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="16px" height="16px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm1-8h-2V7h2v2z"></path></svg>';
+    
+    // Minimal inline styles for the trigger, rest should be in CSS
+    triggerElement.style.display = 'inline-flex';
+    triggerElement.style.verticalAlign = 'middle';
+    triggerElement.style.marginLeft = '6px'; // Maintain spacing
+    triggerElement.style.cursor = 'help';
+
+    targetElement.appendChild(triggerElement);
+
+    let tooltipContentElement = null; 
+    let hideTimeout;
+
+    const showTooltip = () => {
+        clearTimeout(hideTimeout); // Clear any pending hide operations
+
+        if (activeTooltipContent && activeTooltipContent.parentNode) {
+            activeTooltipContent.parentNode.removeChild(activeTooltipContent);
+        }
+        activeTooltipContent = null;
+
+        tooltipContentElement = document.createElement('span');
+        tooltipContentElement.className = 'tooltip-content'; 
+        if (isWide) {
+            tooltipContentElement.classList.add('wide-tooltip');
+        }
+        tooltipContentElement.innerHTML = tooltipText;
+        document.body.appendChild(tooltipContentElement);
+        activeTooltipContent = tooltipContentElement;
+
+        void tooltipContentElement.offsetWidth; 
+
+        const triggerRect = triggerElement.getBoundingClientRect();
+        const contentRect = tooltipContentElement.getBoundingClientRect();
+        
+        let top, left; // These will be document-absolute
+        let arrowTopOffsetVariable = '50%'; // Default
+
+        tooltipContentElement.classList.remove('orient-top', 'orient-bottom', 'orient-left', 'orient-right');
+
+        switch (position) {
+            case 'bottom':
+                top = triggerRect.bottom + window.scrollY + 8;
+                left = triggerRect.left + window.scrollX + (triggerRect.width / 2) - (contentRect.width / 2);
+                tooltipContentElement.classList.add('orient-bottom');
+                break;
+            case 'left':
+                top = triggerRect.top + window.scrollY + (triggerRect.height / 2) - (contentRect.height / 2);
+                left = triggerRect.left + window.scrollX - contentRect.width - 8;
+                tooltipContentElement.classList.add('orient-left');
+                // Arrow offset calculation will be refined after boundary checks
+                break;
+            case 'right':
+                top = triggerRect.top + window.scrollY + (triggerRect.height / 2) - (contentRect.height / 2);
+                left = triggerRect.right + window.scrollX + 8;
+                tooltipContentElement.classList.add('orient-right');
+                // Arrow offset calculation will be refined after boundary checks
+                break;
+            case 'top':
+            default:
+                top = triggerRect.top + window.scrollY - contentRect.height - 8;
+                left = triggerRect.left + window.scrollX + (triggerRect.width / 2) - (contentRect.width / 2);
+                tooltipContentElement.classList.add('orient-top');
+                break;
+        }
+
+        // Convert initial document-absolute positions to viewport-relative for boundary checks
+        let viewport_top = top - window.scrollY;
+        let viewport_left = left - window.scrollX;
+        const margin = 8; // Viewport margin
+
+        // Adjust left boundary
+        if (viewport_left < margin) {
+            viewport_left = margin;
+        }
+        // Adjust right boundary
+        if (viewport_left + contentRect.width > window.innerWidth - margin) {
+            viewport_left = window.innerWidth - contentRect.width - margin;
+        }
+
+        // Adjust top boundary
+        if (viewport_top < margin) {
+            viewport_top = margin;
+        }
+        // Adjust bottom boundary
+        if (viewport_top + contentRect.height > window.innerHeight - margin) {
+            // If tooltip was meant to be 'bottom' and went off-screen, try to flip it to 'top'
+            if (position === 'bottom' && (triggerRect.top - contentRect.height - 8 > margin)) { // triggerRect.top is viewport-relative
+                viewport_top = triggerRect.top - contentRect.height - 8; // New viewport_top for 'top' position
+                tooltipContentElement.classList.remove('orient-bottom'); // Update orientation class
+                tooltipContentElement.classList.add('orient-top');
+            } else {
+                // Cannot flip or wasn't 'bottom', so try to stick to bottom of viewport
+                viewport_top = window.innerHeight - contentRect.height - margin;
+                // If it's still too tall (e.g., contentRect.height > window.innerHeight), stick to top
+                if (viewport_top < margin) {
+                    viewport_top = margin;
+                }
+            }
+        }
+
+        // Final document-absolute positions for styling
+        tooltipContentElement.style.top = `${viewport_top + window.scrollY}px`;
+        tooltipContentElement.style.left = `${viewport_left + window.scrollX}px`;
+        
+        // Recalculate arrowTopOffsetVariable for left/right based on final viewport_top
+        // This is the offset from the tooltip's (viewport) top edge to the trigger's (viewport) center Y
+        if (position === 'left' || position === 'right') {
+            const trigger_viewport_center_y = triggerRect.top + triggerRect.height / 2;
+            // viewport_top is the final viewport-relative top of the tooltip content box
+            arrowTopOffsetVariable = `${trigger_viewport_center_y - viewport_top}px`;
+        }
+        // For top/bottom, arrow is horizontally centered; existing CSS handles Y alignment relative to tooltip edge.
+
+        tooltipContentElement.style.position = 'absolute';
+        tooltipContentElement.style.zIndex = '20000';
+        tooltipContentElement.style.visibility = 'visible';
+        tooltipContentElement.style.opacity = '1';
+        triggerElement.dataset.tooltipShown = 'true'; 
+        tooltipContentElement.style.setProperty('--arrow-top-offset', arrowTopOffsetVariable);
+
+        tooltipContentElement.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout); 
+        });
+        tooltipContentElement.addEventListener('mouseleave', () => {
+             hideTimeout = setTimeout(removeTooltipContent, 50);
+        });
+    };
+
+    const removeTooltipContent = () => {
+        if (tooltipContentElement && tooltipContentElement.parentNode) {
+            tooltipContentElement.parentNode.removeChild(tooltipContentElement);
+        }
+        if (activeTooltipContent === tooltipContentElement) {
+            activeTooltipContent = null;
+        }
+        tooltipContentElement = null; // Ensure it's cleared
+    };
+    
+    triggerElement.addEventListener('mouseenter', showTooltip);
+
+    triggerElement.addEventListener('mouseleave', () => {
+        // Delay hiding to allow mouse to move from trigger to content
+        hideTimeout = setTimeout(() => {
+            // Check if the mouse is now over the tooltip content itself
+            if (activeTooltipContent && activeTooltipContent.matches(':hover')) {
+                return; // Don't hide if mouse is over the content
+            }
+            removeTooltipContent();
+        }, 100); 
+    });
+    
+    return triggerElement;
+}
+
+// Add tooltips to section headers
+function initializeTooltips() {
+    // Tooltip for the CLIL Teaching Assistant chatbot card header
+    const chatSettingsBtn = document.getElementById('chat-settings-btn');
+    if (chatSettingsBtn && chatSettingsBtn.parentElement) {
+        const tooltipText = "Consider this chatbot more of a request refiner than a chatbot. You don\'t actually need this but it\'s sometimes helpful to gather some information beforehand. You can do it by talking to the chatbot, it will ask you some guiding questions, you can also click settings ⚙️ and set some data manually like amount of students or favorite types of activities etc, the final advice Will consider all this context and be sent to the generator for refinement so don\'t stress about the settings." +
+                            "<br><br><strong>The AI is looking for these parameters:</strong>" +
+                            "<ul>" +
+                            "<li><strong>ESSENTIAL INFO:</strong><ul><li>Student count</li><li>Grade/age level</li><li>Language proficiency</li><li>Lesson duration</li><li>Main topic/subject</li></ul></li>" +
+                            "<li><strong>HELPFUL INFO:</strong><ul><li>Available technology</li><li>Classroom setup</li><li>Learning preferences</li><li>Cultural background</li><li>Previous knowledge</li></ul></li>" +
+                            "</ul>";
+        createTooltip(chatSettingsBtn.parentElement, tooltipText, 'bottom');
+    }
+
+    // Tooltip for the "Generate Activity" section header
+    const inputHeader = document.querySelector('.input-section .input-header');
+    if (inputHeader) {
+        const tooltipText = "We\'ve built the generator on top of five core elements of every CLIL lesson. It will take your activity idea, convert it into these five elements, and let you adapt each one as you see fit—whether through big overall changes or precise adjustments, depending on where you want to take it\nThe generator is currently not connected to the chatbot settings. You can paste the final chatbot idea here, or simply type something like 'a lesson about going to the mechanic.'The themes below are just examples of potential settings. Try them.";
+        createTooltip(inputHeader, tooltipText, 'bottom', true); // isWide is true
+    }
+
+    // Tooltip specifically for the .prompt-modifiers div (theme explanations)
+    const promptModifiersDiv = document.querySelector('.prompt-modifiers');
+    if (promptModifiersDiv) {
+        const tooltipText = "Selecting a theme (e.g., Superhero, Space Adventure) will influence the style, vocabulary, and example scenarios of the generated activity, tailoring it to that specific thematic focus. These themes provide a way to add a specific flavor to the educational content.";
+        createTooltip(promptModifiersDiv, tooltipText, 'bottom', false);
+    }
+
+    // Tooltips for the 5 main section headers (pillars)
+    const contentObjectivesHeader = document.querySelector('.content-objectives .section-header h3');
+    if (contentObjectivesHeader) {
+        createTooltip(contentObjectivesHeader, "This pillar defines the subject-specific knowledge and skills students will acquire. What will they learn or be able to do regarding the topic itself?", 'right');
+    }
+
+    const languageObjectivesHeader = document.querySelector('.language-objectives .section-header h3');
+    if (languageObjectivesHeader) {
+        createTooltip(languageObjectivesHeader, "Focuses on the language aspects: key vocabulary, grammatical structures, and communication functions students will use and practice while learning the content.", 'right');
+    }
+
+    const learningTasksHeader = document.querySelector('.learning-tasks .section-header h3');
+    if (learningTasksHeader) {
+        createTooltip(learningTasksHeader, "Outlines the activities and procedures students will follow. How will they engage with the content and language to achieve the objectives? Includes steps, materials, and interactions.", 'right');
+    }
+
+    const assessmentCriteriaHeader = document.querySelector('.assessment .section-header h3');
+    if (assessmentCriteriaHeader) {
+        createTooltip(assessmentCriteriaHeader, "Details how student progress in both content and language will be measured. What will be assessed, and what are the indicators of success?", 'right');
+    }
+
+    const materialsHeader = document.querySelector('.materials .section-header h3'); // Assuming .materials is the class for "Text Deep Learning" section
+    if (materialsHeader) {
+        createTooltip(materialsHeader, "Provides resources and prompts for deeper engagement with a central text or topic, often including key point summaries, critical thinking questions, and related writing tasks.", 'right');
+    }
+    
+    // Add tooltips to sliders
+    const vocabDensitySlider = document.getElementById('vocab-density');
+    if (vocabDensitySlider && vocabDensitySlider.parentElement) {
+        createTooltip(vocabDensitySlider.parentElement, "Controls how many technical terms appear in the activity. Higher values mean more specialized vocabulary.", 'top');
+    }
+    
+    const grammarComplexitySlider = document.getElementById('grammar-complexity');
+    if (grammarComplexitySlider && grammarComplexitySlider.parentElement) {
+        createTooltip(grammarComplexitySlider.parentElement, "Sets the grammatical difficulty level. Higher values use more complex sentence structures and tenses.", 'top');
+    }
+    
+    const contentLanguageBalanceSlider = document.getElementById('content-language-balance');
+    if (contentLanguageBalanceSlider && contentLanguageBalanceSlider.parentElement) {
+        createTooltip(contentLanguageBalanceSlider.parentElement, "Adjusts focus between subject content and language learning. Left emphasizes content knowledge, right emphasizes language skills.", 'top');
+    }
+}
+
+// Function to save the lesson
+async function saveLesson() {
+    console.log("Saving lesson...");
+    const saveButton = document.getElementById('save-lesson-btn');
+
+    try {
+        const user = window.auth.currentUser;
+        if (!user) {
+            alert("You must be logged in to save a lesson.");
+            return;
+        }
+        const idToken = await user.getIdToken();
+
+        // The "digital blueprint" of the lesson
+        const lessonBlueprint = {
+            lessonId: lessonId || null,
+            title: document.getElementById('lesson-title').value || 'Untitled Lesson',
+            pillars: {
+                content: {
+                    versions: generatedSections.content,
+                    currentIndex: currentIndices.content
+                },
+                language: {
+                    versions: generatedSections.language,
+                    currentIndex: currentIndices.language
+                },
+                tasks: {
+                    versions: generatedSections.tasks,
+                    currentIndex: currentIndices.tasks
+                },
+                assessment: {
+                    versions: generatedSections.assessment,
+                    currentIndex: currentIndices.assessment
+                },
+                materials: {
+                    versions: generatedSections.materials,
+                    currentIndex: currentIndices.materials
+                }
+            },
+            sideCards: Array.from(document.querySelectorAll('.helper-content .helper-card, .tips-overlay .insight-card'))
+                .map(card => card._cardData)
+                .filter(Boolean), // Filter out any cards that failed to have data
+            chatHistory: conversationHistory,
+            chatContext: {
+                // Future: capture settings from the chatbot UI
+                systemPrompt: document.getElementById('system-prompt-input')?.value || "You are a helpful assistant for lesson planning.",
+                temperature: document.getElementById('temperature-slider')?.value || 0.7
+            }
+        };
+
+        const response = await fetch('/save_lesson', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify(lessonBlueprint)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log("Lesson saved successfully:", result.lessonId);
+            alert("Lesson saved!");
+            // If it was a new lesson, update the current lessonId and URL
+            if (!lessonId && result.lessonId) {
+                lessonId = result.lessonId;
+                history.pushState({}, '', `/editor/${lessonId}`);
+            }
+        } else {
+            throw new Error(result.error || "Failed to save lesson.");
+        }
+
+    } catch (error) {
+        console.error('Error saving lesson:', error);
+        alert('Error saving lesson: ' + error.message);
+    }
+}
+
+function waitForAuth(callback) {
+    if (window.auth) {
+        callback();
+    } else {
+        console.log("Waiting for auth...");
+        setTimeout(() => waitForAuth(callback), 100);
+    }
+}
+
+// Function to load a lesson
+async function loadLesson(id) {
+    console.log("Loading lesson:", id);
+    try {
+        const user = window.auth.currentUser;
+        if (!user) {
+            // This case should be handled by onAuthStateChanged, but as a fallback
+            console.error("No user logged in, cannot load lesson.");
+            return;
+        }
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(`/load_lesson/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${idToken}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const lesson = result.lesson;
+            console.log("Lesson data received:", lesson);
+
+            // 1. Populate Title
+            document.getElementById('lesson-title').value = lesson.title;
+
+            // 2. Populate Pillars
+            generatedSections.content = lesson.pillars.content.versions;
+            currentIndices.content = lesson.pillars.content.currentIndex;
+
+            generatedSections.language = lesson.pillars.language.versions;
+            currentIndices.language = lesson.pillars.language.currentIndex;
+
+            generatedSections.tasks = lesson.pillars.tasks.versions;
+            currentIndices.tasks = lesson.pillars.tasks.currentIndex;
+
+            generatedSections.assessment = lesson.pillars.assessment.versions;
+            currentIndices.assessment = lesson.pillars.assessment.currentIndex;
+
+            generatedSections.materials = lesson.pillars.materials.versions;
+            currentIndices.materials = lesson.pillars.materials.currentIndex;
+
+            Object.keys(generatedSections).forEach(sectionKey => {
+                updateSectionDisplay(sectionKey);
+            });
+
+            // 3. Recreate Side Cards using their original creation functions
+            const helperContent = document.querySelector('.helper-content');
+            const tipsOverlay = document.querySelector('.tips-overlay');
+            helperContent.innerHTML = ''; // Clear existing left-column cards
+            tipsOverlay.innerHTML = ''; // Clear existing right-column cards
+
+            if (lesson.sideCards) {
+                lesson.sideCards.forEach(cardInfo => {
+                    let cardElement = null;
+                    if (cardInfo.type === 'helper') {
+                        cardElement = createHelperCard(cardInfo.recipe);
+                        if(cardElement) helperContent.appendChild(cardElement);
+                    } else if (cardInfo.type === 'insight') {
+                        cardElement = createInsightCard(cardInfo.recipe);
+                        if(cardElement) tipsOverlay.appendChild(cardElement);
+                    } else if (cardInfo.type === 'pillar_copy') {
+                        cardElement = createPillarCopyCard(cardInfo.recipe);
+                        if(cardElement) helperContent.appendChild(cardElement);
+                    }
+
+                    if (cardElement) {
+                        // Make the card visible with an animation
+                        setTimeout(() => cardElement.classList.add('visible'), 100);
+                    }
+                });
+            }
+
+            // 4. Populate Chat
+            conversationHistory = lesson.chatHistory || [];
+            const messagesContainer = document.getElementById('chatbot-messages');
+            messagesContainer.innerHTML = '';
+            conversationHistory.forEach(msg => addChatMessage(msg.content, msg.role === 'user'));
+            
+            // 5. Populate Chat Context (Bonus)
+            // This part can be expanded to fully restore the settings UI
+            if(lesson.chatContext) {
+                 // For now, just log it
+                 console.log("Restoring chat context:", lesson.chatContext);
+            }
+
+
+        } else {
+            throw new Error(result.error || "Failed to load lesson.");
+        }
+
+    } catch (error) {
+        console.error("Error loading lesson:", error);
+        alert("Could not load lesson: " + error.message);
+    }
+}

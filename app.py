@@ -4,9 +4,35 @@ import json
 import os
 from dotenv import load_dotenv
 import httpx
+import firebase_admin
+from firebase_admin import credentials, firestore, auth
 
 # Load environment variables
 load_dotenv()
+
+# Initialize Firebase Admin SDK
+try:
+    # In a Replit environment, the private key needs to be parsed from the environment variable
+    private_key = os.environ.get('FIREBASE_PRIVATE_KEY', '').replace('\\n', '\n')
+
+    cred = credentials.Certificate({
+        "type": os.environ.get('FIREBASE_TYPE'),
+        "project_id": os.environ.get('FIREBASE_PROJECT_ID'),
+        "private_key_id": os.environ.get('FIREBASE_PRIVATE_KEY_ID'),
+        "private_key": private_key,
+        "client_email": os.environ.get('FIREBASE_CLIENT_EMAIL'),
+        "client_id": os.environ.get('FIREBASE_CLIENT_ID'),
+        "auth_uri": os.environ.get('FIREBASE_AUTH_URI'),
+        "token_uri": os.environ.get('FIREBASE_TOKEN_URI'),
+        "auth_provider_x509_cert_url": os.environ.get('FIREBASE_AUTH_PROVIDER_X509_CERT_URL'),
+        "client_x509_cert_url": os.environ.get('FIREBASE_CLIENT_X509_CERT_URL')
+    })
+    firebase_admin.initialize_app(cred)
+    print("Firebase Admin SDK initialized successfully.")
+except Exception as e:
+    print(f"Error initializing Firebase Admin SDK: {e}")
+
+db = firestore.client()
 
 app = Flask(__name__)
 
@@ -194,12 +220,7 @@ ACTIVITY_TYPES = {
 - Add singing and musical activities
 - Use music-based metaphors""",
 
-    "food": """Theme the activity around cooking and food:
-- Use cooking metaphors and examples
-- Include food-related vocabulary
-- Structure tasks like cooking recipes
-- Reference different cuisines and dishes
-- Connect learning to food preparation""",
+    "custom_theme_template": "Incorporate the following custom theme into the activity: '{custom_theme}'. Make all aspects of the activity (vocabulary, scenarios, examples, tone) reflect this custom theme.",
 
     "station_rotation": {
         "name": "Station Rotation",
@@ -317,7 +338,9 @@ ACTIVITY_TYPES = {
 - Analysis of factors
 - Solution development
 - Application of learning to similar cases"""
-    }
+    },
+    
+
 }
 
 # Section-specific system prompts for customization
@@ -475,12 +498,12 @@ Remember to respond with a valid JSON object."""
 
 # Add new system prompt for inline generation
 INLINE_GENERATION_PROMPT = """You are an AI assistant helping to generate inline content in a document editor.
+
 You will receive:
 1. Text that appears before the cursor position
 2. A command from the user about what to add/modify
 
 Your task is follow the user request and generate text that continues naturally from the above context.
-user will probaby as for elaboration or list of examples or something like that.
 
 Respond ONLY with the text to be inserted, no explanations or markdown."""
 
@@ -525,7 +548,7 @@ INFORMATION GATHERING RULES:
    "Great! I think I have a good picture of your teaching context now. Would you like me to help create an activity that..."
 
 CONVERSATION STYLE:
-- Be enthusiastic about creating the perfect activity
+- always remeber about {class_context} and {activity_types}
 - Connect questions to activity creation ("This will help us choose the right group activities...")
 - Show how each piece of information will help
 - When activity types are selected, reference their specific features and benefits
@@ -535,7 +558,32 @@ READY TO CREATE CHECK:
 When you have gathered enough information (at least all ESSENTIAL INFO), say:
 "I think we have enough context to create a great activity now! Would you like me to help you design an activity that [summarize key points and include selected activity types]?"
 
-Remember: Every question should clearly connect to creating a better-tailored activity. Keep the focus on gathering what we need to create something perfect for their specific context When delivering final response make sure to inslude avery piece of information that was gathered including all the is avaiable in the class_contect and the activity types variables that are avaiable to you."""
+FINAL RESPONSE FORMAT:
+When you have gathered enough information and are ready to suggest an activity, ALWAYS structure your response exactly like this:
+
+"📋 ACTIVITY PARAMETERS:
+• Number of Students: [from class_context]
+• Grade/Age Level: [from class_context]
+• Language Skills: [from class_context]
+• Technical Vocabulary Density: [from class_context]%
+• Grammar Complexity Level: [from class_context]/5
+• Content vs Language Balance: [from class_context]% content focus
+• Selected Activity Types: [from activity_types]
+• Additional Context Gathered: [list any other relevant information collected during chat]
+
+🎯 SUGGESTED ACTIVITY:
+[Your detailed activity description here, incorporating all parameters above]"
+
+RESPONSE RULES:
+1. NEVER skip any parameters in the final response
+2. ALWAYS include ALL settings from class_context
+3. ALWAYS list ALL selected activity types
+4. If any essential parameter is missing, ask for it
+5. Use EXACTLY the format above for final activity suggestions
+6. Make sure the activity description clearly reflects all parameters
+
+Remember: Every question should clearly connect to creating a better-tailored activity. Keep the focus on gathering what we need to create something perfect for their specific context When delivering final response make sure to inslude avery piece of information that was gathered including all the is avaiable in the class_contect and the activity types variables that are avaiable to you.
+"""
 
 # Add tag generation prompt
 TAG_GENERATION_PROMPT = """You are a CLIL teaching assistant helping to generate related tags.
@@ -561,8 +609,8 @@ The generated tags should:
 Remember to respond with a valid JSON object."""
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def login():
+    return render_template('login.html')
 
 @app.route('/generate', methods=['POST'])
 def generate_activity():
@@ -571,16 +619,31 @@ def generate_activity():
     customization = request.json.get('customization', '')
     current_activity = request.json.get('current_activity', {})
     modifiers = request.json.get('modifiers', [])
+    custom_theme_text = request.json.get('custom_theme_text', None)
     
     try:
         if section == 'all':
             # Generate main lesson content
             system_prompt = CLIL_BASE_PROMPT
+            modifier_prompts = ""
             if modifiers:
-                modifier_prompts = "\n\nAdditional requirements:\n"
+                modifier_prompts += "\n\nAdditional requirements:\n"
                 for mod in modifiers:
                     if mod in ACTIVITY_TYPES:
-                        modifier_prompts += f"\n{ACTIVITY_TYPES[mod]}\n"
+                        if isinstance(ACTIVITY_TYPES[mod], dict) and 'description' in ACTIVITY_TYPES[mod]:
+                            modifier_prompts += f"\n{ACTIVITY_TYPES[mod]['description']}\n"
+                        elif isinstance(ACTIVITY_TYPES[mod], str):
+                            modifier_prompts += f"\n{ACTIVITY_TYPES[mod]}\n"
+            
+            if custom_theme_text and custom_theme_text.strip():
+                if not modifier_prompts:
+                    modifier_prompts += "\n\nAdditional requirements:\n"
+                
+                # Use the template from ACTIVITY_TYPES
+                custom_theme_prompt_template = ACTIVITY_TYPES.get("custom_theme_template", "Incorporate the following custom theme into the activity: '{custom_theme}'.") # Fallback
+                modifier_prompts += f"\n{custom_theme_prompt_template.format(custom_theme=custom_theme_text)}\n"
+            
+            if modifier_prompts:
                 system_prompt += modifier_prompts
             
             main_response = client.chat.completions.create(
@@ -604,13 +667,27 @@ def generate_activity():
                 customization=customization
             )
             
-            # Add modifiers if present
+            # Add modifiers if present (including custom theme for consistency if sections are regenerated with themes)
+            modifier_prompts_section = ""
             if modifiers:
-                modifier_prompts = "\n\nAdditional theme requirements:\n"
+                modifier_prompts_section += "\n\nAdditional theme requirements:\n"
                 for mod in modifiers:
                     if mod in ACTIVITY_TYPES:
-                        modifier_prompts += f"\n{ACTIVITY_TYPES[mod]}\n"
-                system_prompt += modifier_prompts
+                        if isinstance(ACTIVITY_TYPES[mod], dict) and 'description' in ACTIVITY_TYPES[mod]:
+                            modifier_prompts_section += f"\n{ACTIVITY_TYPES[mod]['description']}\n"
+                        elif isinstance(ACTIVITY_TYPES[mod], str):
+                            modifier_prompts_section += f"\n{ACTIVITY_TYPES[mod]}\n"
+            
+            if custom_theme_text and custom_theme_text.strip():
+                if not modifier_prompts_section:
+                    modifier_prompts_section += "\n\nAdditional theme requirements:\n"
+                
+                # Use the template from ACTIVITY_TYPES
+                custom_theme_prompt_template = ACTIVITY_TYPES.get("custom_theme_template", "Incorporate the following custom theme into the activity: '{custom_theme}'.") # Fallback
+                modifier_prompts_section += f"\n{custom_theme_prompt_template.format(custom_theme=custom_theme_text)}\n"
+            
+            if modifier_prompts_section:
+                system_prompt += modifier_prompts_section
             
             # Changed to allow natural text response
             response = client.chat.completions.create(
@@ -714,7 +791,7 @@ def generate_inline():
 
  user request: {command}
 
-Generate appropriate text that continues naturally from the above context."""
+."""
 
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -770,6 +847,28 @@ Current Content: {context.get('content', '')}
             "success": False,
             "error": str(e)
         }), 500
+
+@app.route('/get-firebase-config')
+def get_firebase_config():
+    firebase_config = {
+        "apiKey": os.environ.get("FIREBASE_API_KEY"),
+        "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN"),
+        "projectId": os.environ.get("FIREBASE_PROJECT_ID"),
+        "storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET"),
+        "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID"),
+        "appId": os.environ.get("FIREBASE_APP_ID"),
+        "measurementId": os.environ.get("FIREBASE_MEASUREMENT_ID"),
+    }
+    return jsonify(firebase_config)
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
+
+@app.route('/editor')
+@app.route('/editor/<lesson_id>')
+def editor(lesson_id=None):
+    return render_template('index.html', lesson_id=lesson_id)
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -838,6 +937,102 @@ Teaching Parameters:
             "success": False,
             "error": str(e)
         }), 500
+
+@app.route('/save_lesson', methods=['POST'])
+def save_lesson():
+    try:
+        id_token = request.headers.get('Authorization').split('Bearer ')[1]
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
+        
+        lesson_data = request.json
+        lesson_id = lesson_data.pop('lessonId', None)
+
+        lesson_data['userId'] = uid
+        lesson_data['lastModified'] = firestore.SERVER_TIMESTAMP
+
+        if lesson_id:
+            # Update existing lesson
+            doc_ref = db.collection('lessons').document(lesson_id)
+            lesson_doc = doc_ref.get()
+            if not lesson_doc.exists:
+                 return jsonify({"success": False, "error": "Lesson to update not found."}), 404
+            if lesson_doc.to_dict().get('userId') != uid:
+                 return jsonify({"success": False, "error": "Unauthorized to update this lesson."}), 403
+            
+            doc_ref.set(lesson_data, merge=True)
+            return jsonify({"success": True, "lessonId": lesson_id})
+        else:
+            # Create a new lesson document
+            doc_ref = db.collection('lessons').document()
+            doc_ref.set(lesson_data)
+            return jsonify({"success": True, "lessonId": doc_ref.id})
+            
+    except auth.InvalidIdTokenError:
+        return jsonify({"success": False, "error": "Invalid ID token"}), 401
+    except Exception as e:
+        print(f"Error saving lesson: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/get_lessons', methods=['GET'])
+def get_lessons():
+    try:
+        # 1. Verify user token
+        id_token = request.headers.get('Authorization').split('Bearer ')[1]
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
+        
+        # 2. Query Firestore for lessons
+        lessons_ref = db.collection('lessons')
+        query = lessons_ref.where('userId', '==', uid).order_by('lastModified', direction=firestore.Query.DESCENDING)
+        results = query.stream()
+        
+        # 3. Format lessons for response
+        lessons = []
+        for lesson in results:
+            lesson_data = lesson.to_dict()
+            lessons.append({
+                "id": lesson.id,
+                "title": lesson_data.get("title", "Untitled Lesson"),
+                "lastModified": lesson_data.get("lastModified").strftime("%b %d, %Y")
+            })
+            
+        return jsonify({"success": True, "lessons": lessons}), 200
+        
+    except auth.InvalidIdTokenError:
+        return jsonify({"success": False, "error": "Invalid ID token"}), 401
+    except Exception as e:
+        print(f"Error getting lessons: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/load_lesson/<lesson_id>', methods=['GET'])
+def load_lesson(lesson_id):
+    try:
+        # 1. Verify user token
+        id_token = request.headers.get('Authorization').split('Bearer ')[1]
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
+        
+        # 2. Fetch lesson from Firestore
+        doc_ref = db.collection('lessons').document(lesson_id)
+        lesson = doc_ref.get()
+        
+        if not lesson.exists:
+            return jsonify({"success": False, "error": "Lesson not found"}), 404
+        
+        lesson_data = lesson.to_dict()
+        
+        # 3. Security check: ensure the user owns this lesson
+        if lesson_data.get('userId') != uid:
+            return jsonify({"success": False, "error": "Unauthorized"}), 403
+            
+        return jsonify({"success": True, "lesson": lesson_data}), 200
+        
+    except auth.InvalidIdTokenError:
+        return jsonify({"success": False, "error": "Invalid ID token"}), 401
+    except Exception as e:
+        print(f"Error loading lesson: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
     # Get port from environment variable or default to 5000

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CLIL Notebook</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --bg-color: #1f1f1f;
+            --surface-color: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #aaa;
+            --accent-color: #8ab4f8;
+        }
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: "Roboto", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+        .header-logo {
+            font-size: 22px;
+            font-weight: 500;
+        }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .header-btn:hover {
+            background-color: #333;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #logout-btn {
+            background-color: var(--surface-color);
+            border: 1px solid #555;
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #logout-btn:hover {
+            background-color: #444;
+        }
+
+        .main-content {
+            padding-top: 60px;
+        }
+        .welcome-heading {
+            font-size: 48px;
+            font-weight: 400;
+            margin-bottom: 40px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        .create-new-btn {
+            background-color: #f0f0f0;
+            color: #1f1f1f;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+        }
+        .create-new-btn:hover {
+            background-color: #dcdcdc;
+        }
+        .view-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .view-toggle {
+            display: flex;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .view-toggle button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+        }
+        .view-toggle button.active {
+            background-color: #4a4a4a;
+            color: var(--text-primary);
+        }
+        .sort-dropdown select {
+            background-color: var(--surface-color);
+            border: 1px solid #555;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .lessons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .lesson-card {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid transparent;
+        }
+        .lesson-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            border-color: #555;
+        }
+        .lesson-card-icon {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        .lesson-card h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .lesson-card p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="header">
+            <div class="header-logo">CLIL Notebook</div>
+            <div class="header-controls">
+                <button class="header-btn" title="Settings">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.58-.21l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41H9.19a.484.484 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.488.488 0 0 0-.58.21l-1.92 3.32a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.07.64-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.58.21l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.34.36.61.7.61h3.64c.34 0 .65-.27.7-.61l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.21.08.47 0 .58-.21l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"></path></svg>
+                </button>
+                <div class="user-avatar" title="User Menu">C</div>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <h1 class="welcome-heading">Welcome to CLIL Notebook</h1>
+
+            <div class="toolbar">
+                <button id="create-new-btn" class="create-new-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+                    <span>Create new</span>
+                </button>
+                <div class="view-controls">
+                    <div class="view-toggle">
+                        <button class="active" title="Grid view">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3zm0 10h8v8H3zm10-10h8v8h-8zm0 10h8v8h-8z"></path></svg>
+                        </button>
+                        <button title="List view">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path></svg>
+                        </button>
+                    </div>
+                    <div class="sort-dropdown">
+                        <select>
+                            <option>Most recent</option>
+                            <option>Alphabetical</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lessons-grid" id="lessons-grid">
+                <!-- Your saved lessons will be dynamically inserted here -->
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html> 
